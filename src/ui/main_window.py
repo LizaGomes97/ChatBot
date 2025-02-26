@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                            QPushButton, QLineEdit, QTextEdit, QLabel,
-                           QMessageBox)
+                           QMessageBox, QCheckBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from ..bot.whatsapp_bot import WhatsAppBot
 
@@ -57,6 +57,13 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(False)
         layout.addWidget(self.stop_button)
         
+        # Checkbox para auto-boas-vindas
+        self.auto_welcome_check = QCheckBox('Monitorar novas conversas')
+        self.auto_welcome_check.setEnabled(False)
+        self.auto_welcome_check.setChecked(True)
+        self.auto_welcome_check.stateChanged.connect(self.toggle_auto_welcome)
+        layout.addWidget(self.auto_welcome_check)
+        
         # Log de mensagens
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
@@ -67,6 +74,7 @@ class MainWindow(QMainWindow):
         
     def start_bot(self):
         try:
+            self.bot = None
             self.bot = WhatsAppBot()
             if self.bot.start():
                 self.log_message("Aguardando login no WhatsApp Web...")
@@ -74,7 +82,12 @@ class MainWindow(QMainWindow):
                     self.status_label.setText('Bot Conectado')
                     self.start_button.setEnabled(False)
                     self.service_button.setEnabled(True)
+                    self.auto_welcome_check.setEnabled(True)
+                    
+                    # Ativa o monitoramento automático ao iniciar
+                    self.bot.toggle_auto_welcome(True)
                     self.log_message("Bot iniciado com sucesso!")
+                    self.log_message("Monitoramento de novas conversas ativado")
                 else:
                     self.log_message("Erro ao fazer login!")
             else:
@@ -105,6 +118,12 @@ class MainWindow(QMainWindow):
             self.stop_button.setEnabled(False)
             self.contact_input.setEnabled(True)
             self.log_message("Atendimento parado!")
+    
+    def toggle_auto_welcome(self, state):
+        if self.bot:
+            self.bot.toggle_auto_welcome(bool(state))
+            status = "ativado" if state else "desativado"
+            self.log_message(f"Monitoramento de novas conversas {status}")
             
     def closeEvent(self, event):
         if self.bot:
